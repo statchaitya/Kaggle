@@ -2,7 +2,7 @@
 
 import gc
 import pandas as pd
-#import numpy as np
+import numpy as np
 import lightgbm as lgb
 from sklearn.cross_validation import train_test_split
 
@@ -30,7 +30,7 @@ print("train data read. train data shape is", train.shape)
 gc.collect()
 
 # creating n_clicks_ip
-n_clicks_ip = merge.groupby(['ip'])['channel'].count().reset_index()
+n_clicks_ip = train.groupby(['ip'])['channel'].count().reset_index()
 n_clicks_ip.columns = ['ip', 'n_clicks_ip']
 train = pd.merge(train, n_clicks_ip, on='ip', how='left', sort=False)
 train['n_clicks_ip'] = train['n_clicks_ip'].astype('uint16')
@@ -58,6 +58,7 @@ train['n_clicks_app_0'] = train['n_clicks_app_0'].astype('uint16')
 
 gc.collect()
 
+train.drop('ip', axis=1, inplace=True)
 y = train['is_attributed']
 train.drop('is_attributed', axis=1, inplace=True)
 xtr, xval, ytr, yval = train_test_split(train, y, test_size=0.1, random_state=99)
@@ -84,3 +85,36 @@ gbm = lgb.train(params,
                 early_stopping_rounds = 15,
                 valid_sets=lgb_eval,
                 verbose_eval=True)
+				
+				
+del xtr, ytr, xval, yval
+gc.collect()
+test_columns = train_columns[:-1]
+test_columns.append('click_id')
+test = pd.read_csv(path+"test.csv", usecols = test_columns, dtype=dtypes)
+
+gc.collect()
+
+sub = pd.DataFrame()
+sub['click_id'] = test['click_id'].astype('int')
+test.drop(['click_id'], axis=1, inplace=True)
+gc.collect()
+
+# creating n_clicks_ip
+n_clicks_ip_test = test.groupby(['ip'])['channel'].count().reset_index()
+n_clicks_ip_test.columns = ['ip', 'n_clicks_ip']
+
+test = pd.merge(test, n_clicks_ip_test, on='ip', how='left', sort=False)
+test['n_clicks_ip'] = test['n_clicks_ip'].astype('uint16')
+
+test = pd.merge(test, app_dloads_yes, on='app', how='left', sort=False)
+test['n_clicks_app_1'].fillna(0, inplace=True)
+test['n_clicks_app_1'] = test['n_clicks_app_1'].astype('uint16')
+
+test = pd.merge(test, app_dloads_no, on='app', how='left', sort=False)
+test['n_clicks_app_0'].fillna(0, inplace=True)
+test['n_clicks_app_0'] = test['n_clicks_app_0'].astype('uint16')
+
+y_pred = gbm.predict(test, num_iteration=gbm.best_iteration)
+sub['is_attributed'] = np.round(y_pred,4)
+sub.to_csv('lightgbm_1.csv', index=False)
