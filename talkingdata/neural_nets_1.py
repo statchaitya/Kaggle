@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import lightgbm as lgb
 from sklearn.cross_validation import train_test_split
+from sklearn.metrics import roc_auc_score
 
 dtypes = {
         'ip'            : 'uint32',
@@ -84,7 +85,10 @@ def create_baseline():
 
 estimator = KerasClassifier(build_fn=create_baseline, epochs=1, batch_size=10000, verbose=1)
 estimator.fit(xtr, ytr)
-estimator.score(xval, yval)
+y_pred_val = estimator.predict_proba(xval)
+y_pred_val = pd.DataFrame(y_pred_val)
+y_pred_val = y_pred_val.iloc[:,1].values
+roc_auc_score(yval, y_pred_val)
 
 
 del xtr, ytr, xval, yval
