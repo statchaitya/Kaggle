@@ -1,5 +1,3 @@
-
-
 import gc
 import pandas as pd
 import numpy as np
@@ -63,30 +61,32 @@ y = train['is_attributed']
 train.drop('is_attributed', axis=1, inplace=True)
 xtr, xval, ytr, yval = train_test_split(train, y, test_size=0.1, random_state=99)
 
-params = {
-    'boosting_type': 'gbdt',
-    'objective': 'binary',
-    'learning_rate': 0.1,
-    'metric': 'auc',
-    'num_leaves': 7,
-    'max_depth': 3,
-    'bagging_fraction': 0.85,
-    'bagging_freq': 1,
-    'feature_fraction': 0.8
-}
 
-lgb_train = lgb.Dataset(xtr, ytr)
-lgb_eval = lgb.Dataset(xval, yval)
+gc.collect()
+import keras
+from keras.models import Sequential
+from keras.layers import Dense, Activation
+from keras.optimizers import Adam
+from keras.wrappers.scikit_learn import KerasClassifier
 
-print("Model training")
-gbm = lgb.train(params,
-                lgb_train,
-                num_boost_round=500,
-                early_stopping_rounds = 15,
-                valid_sets=lgb_eval,
-                verbose_eval=True)
-				
-				
+def create_baseline():
+    model = Sequential()
+    model.add(Dense(10, kernel_initializer='uniform', input_dim=7))
+    model.add(Activation('relu'))
+    model.add(Dense(5, kernel_initializer='uniform'))
+    model.add(Activation('relu'))
+    model.add(Dense(1, kernel_initializer='uniform'))
+    model.add(Activation('sigmoid'))
+    model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+    
+    return model
+ 
+
+estimator = KerasClassifier(build_fn=create_baseline, epochs=1, batch_size=10000, verbose=1)
+estimator.fit(xtr, ytr)
+estimator.score(xval, yval)
+
+
 del xtr, ytr, xval, yval
 gc.collect()
 test_columns = train_columns[:-1]
@@ -117,6 +117,7 @@ test['n_clicks_app_0'] = test['n_clicks_app_0'].astype('uint16')
 
 test.drop('ip', axis=1, inplace=True)
 
-y_pred = gbm.predict(test, num_iteration=gbm.best_iteration)
-sub['is_attributed'] = np.round(y_pred,4)
-sub.to_csv('lightgbm_1.csv', index=False)
+y_pred = estimator.predict_proba(test)
+y_pred = pd.DataFrame(y_pred)
+sub['is_attributed'] = np.round(y_pred.iloc[:,1],5)
+sub.to_csv('neural_nets_1.csv', index=False)
