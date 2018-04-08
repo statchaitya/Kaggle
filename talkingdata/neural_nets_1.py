@@ -81,7 +81,7 @@ def create_baseline():
     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
     
     return model
- 
+
 
 estimator = KerasClassifier(build_fn=create_baseline, epochs=1, batch_size=10000, verbose=1)
 estimator.fit(xtr, ytr)
