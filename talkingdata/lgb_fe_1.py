@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Sun Apr  8 20:18:23 2018
+
+@author: cgokh
+"""
+
 
 import gc
 import pandas as pd
@@ -26,6 +33,7 @@ train = pd.read_csv(path+"train.csv",  skiprows = range(1,skip+1), dtype=dtypes)
 print("train data read. train data shape is", train.shape)
 
 
+print("Starting feature engineering")
 def feature_engineering(df):
     df['datetime'] = pd.to_datetime(df['click_time'])
     df['wday'] = df['datetime'].dt.dayofweek
@@ -36,14 +44,14 @@ def feature_engineering(df):
     least_freq_hours_in_test_data = [6,11,15]
     
     df['in_test_hh'] = np.where(df['hour'].isin(most_freq_hours_in_test_data), 1, np.where(df['hour'].isin(least_freq_hours_in_test_data), 3, 2))
-    
+    print("Feature 1 done")
     # Number of clicks for a particular IP,DAY,DIFFERENT TIMES OF DAY
     nip_day_test_hh = df.groupby(['ip','wday','in_test_hh'])['channel'].count().reset_index()
     nip_day_test_hh.columns = ['ip', 'wday','in_test_hh', 'nip_day_test_hh']
     df = pd.merge(df, nip_day_test_hh, on=['ip','wday','in_test_hh'], how='left', sort=False)
     df['nip_day_test_hh'] = df['nip_day_test_hh'].astype('uint16')
     del nip_day_test_hh
-    
+    print("Feature 2 done")
     df.drop(['in_test_hh'], axis=1, inplace=True)
     
     nip = df.groupby(['ip','wday','hour'])['channel'].count().reset_index()
@@ -51,7 +59,7 @@ def feature_engineering(df):
     df = pd.merge(df, nip, on=['ip','wday','hour'], how='left', sort=False)
     df['nip'] = df['nip'].astype('uint16')
     del nip
-    
+    print("Feature 3 done")
     gc.collect()
     
     nip = df.groupby(['ip','wday','hour','os'])['channel'].count().reset_index()
@@ -61,7 +69,7 @@ def feature_engineering(df):
     del nip
     
     gc.collect()
-    
+    print("Feature 4 done")
     nip = df.groupby(['ip','wday','hour','app'])['channel'].count().reset_index()
     nip.columns = ['ip', 'wday','hour','app', 'nip_app']
     df = pd.merge(df, nip, on=['ip','wday','hour','app'], how='left', sort=False)
@@ -83,7 +91,12 @@ def feature_engineering(df):
     df = pd.merge(df, nip, on=['app','wday','hour'], how='left', sort=False)
     df['n_app'] = df['n_app'].astype('uint16')
     del nip
-
+    print("Creating last feature")
+    app_dloads_yes = pd.read_csv('C:/Kaggle/talkingdata/features/app_dloads_yes.csv')
+    app_dloads_yes['app_dloads_log1p'] = np.log1p(app_dloads_yes['clicks_app_is_atr_1'])
+    app_dloads_yes.drop('clicks_app_is_atr_1', axis=1, inplace=True)
+    df = pd.merge(df, app_dloads_yes, on='app', how='left', sort=False)
+    
     gc.collect()    
     
     return df
@@ -116,6 +129,7 @@ categorical_vars = ["app", "device", "os", "channel", "hour"]
 
 lgb_train = lgb.Dataset(xtr, ytr)
 lgb_eval = lgb.Dataset(xval, yval)
+del xtr, ytr, xval, yval
 
 print("Model training")
 gbm = lgb.train(params,
@@ -126,7 +140,7 @@ gbm = lgb.train(params,
                 valid_sets=lgb_eval,
                 verbose_eval=True)
 
-del xtr, ytr, xval, yval
+
 gc.collect()
 test_columns = train_columns[:-1]
 test_columns.append('click_id')
