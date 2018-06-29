@@ -7,8 +7,8 @@ Created on Wed Mar 21 18:16:49 2018
 
 import pandas as pd
 path = 'C:/Kaggle/talkingdata/submissions/'
-submission_1_name = "andy_blend_blend_lgb0730_xgb30m_weighted_blend.csv"
-submission_2_name = ""
+submission_1_name = "wordbatch_fm_ftrl_09769.csv"
+submission_2_name = "overfitting_model_need_bagging_1.csv"
 submission_3_name = "sub_skip3.csv"
 submission_4_name = "sub_skip4.csv"
 submission_5_name = "sub_skip5.csv"
