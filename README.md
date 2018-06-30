@@ -1,3 +1,5 @@
 # Kaggle
 
-A folder of all the kernels in Kaggle. Including code files as well as notebooks.
+This is a folder of all the predictive analytics and data visualization work I have done on datasets/competition hosted on hhtps://www.kaggle.comm
+
+Each project has been described in the respective README files of their folders.
