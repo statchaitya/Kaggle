@@ -20,12 +20,4 @@ Kernels submitted will be evaluated based on the following criteria:
 
 ## My solution description
 
-Philippines is the country with the most number of loans in the data. I decided to focus on identifying those areas in philippines which were more needy in terms of loan (economically backward) so that perhaps more loans could be diverted to these regions in the future than regions where the richer category of people live. I searched for an online economic indicators data about the regions in Philippines, cleaned it to bring in appropriate form and joined it with the Kaggle data to perform analysis.
 
-Data files for this data can be found at the following links. To reproduce the analysis, run the .R files after downloading the data files from here
-
-https://www.kaggle.com/kiva/data-science-for-good-kiva-crowdfunding
-
-https://www.kaggle.com/statchaitya/a-few-poverty-indicators-for-philippines-by-region
-
-https://www.kaggle.com/statchaitya/philippines-regions-and-provinces
