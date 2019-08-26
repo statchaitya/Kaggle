@@ -5,7 +5,7 @@ library(lubridate)
 library(reshape2)
 library(plotly)
 
-dtrain <- read.csv("C:/Kaggle/googlemerchandise/webkpiapp/train_new.csv", stringsAsFactors = F)
+dtrain <- read.csv("C:/Kaggle/googlemerchandise/data/train_new.csv", stringsAsFactors = F)
 dtrain$date <- ymd(dtrain$date)
 dtrain$transactionRevenue <- as.numeric(dtrain$transactionRevenue)
 dtrain$transactionRevenue[is.na(dtrain$transactionRevenue)] <- 0
@@ -133,9 +133,9 @@ dynamic_vs_normal_adwords_comparison <-
 dynamic_vs_normal_adwords_comparison_melted <- melt(dynamic_vs_normal_adwords_comparison)
 
 dynamic_vs_normal_adwords_comparison_plot <-  ggplot(data = dynamic_vs_normal_adwords_comparison_melted %>%
-           filter(variable != "totalRevenue")) +
+                                                       filter(variable != "totalRevenue")) +
     geom_bar(aes(x = variable, y = value, fill = AdType),
-             position = "fill",
+             position = "stack",
              stat = "identity") +
     labs(x = "Metric",
          y = "Proportion") +
@@ -145,6 +145,14 @@ dynamic_vs_normal_adwords_comparison_plot <-  ggplot(data = dynamic_vs_normal_ad
                                      vjust = 1))
 ggplotly(
   dynamic_vs_normal_adwords_comparison_plot)
+
+
+# IDeas for future. 
+# 1. Calculate pageviews/session and compare paid searches
+# 2. Calculate bounce rate
+# 3. New Visit Rate
+# 4. Inter device CR per adtype?
+# 5. Research more metrics
 
 ggplot(dynamic_vs_normal_adwords_comparison_melted %>%
          filter(variable == "totalSessions") %>%
