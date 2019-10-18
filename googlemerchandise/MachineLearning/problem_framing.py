@@ -12,6 +12,8 @@ In this script,
 """
 
 import pandas as pd
+import numpy as np
+import gc
 
 train = pd.read_csv("C:/Kaggle/googlemerchandise/data/train_new.csv", encoding = "ISO-8859-1")
 
@@ -37,8 +39,10 @@ Steps:
                   - This metric might be biased because a customer can buy 50 times and give us
                     10000 bucks on the contrary on can buy stuff worth 10000 in 3-4 times if he/she
                     buys costly things.
-                  - So average order value is more robust and we can use that.
-              b. Avg. order value
+                  - So average order value per customer is more robust and we can use that.
+              b. Avg. order value per customer
+                  - Some customers have a very high AOV (16k, 7k, 5.6k etc..)
+                  - Most of the distribution revolves around 0
     3. Features
         - Taking input from customer empathy, important features affecting AOV or revenue in general
           maybe
@@ -50,3 +54,83 @@ Steps:
               f. # bounces / visit
               g. Total # bounces
 '''
+
+# Creation of metrics defined above in 2
+
+# Total revenue per customer till date
+
+train['totalRevenue'] = train.groupby('fullVisitorId').transactionRevenueNew.transform(np.sum)
+train['visitRevenueFlag'] = [1 if i > 0 else 0 for i in list(train['transactionRevenueNew'])]
+train['totalOrders'] = train.groupby('fullVisitorId').visitRevenueFlag.transform(np.sum)
+train['AOVPerCustomer'] = train['totalRevenue']/train['totalOrders'] 
+train['AOVPerCustomer'].fillna(0, inplace=True)
+
+
+cust_df = train.groupby('fullVisitorId').count()['transactionRevenueNew'].reset_index(name='totalVisits')
+new_key = list(range(cust_df.shape[0]))
+cust_df['new_cust_id'] = new_key
+
+train = pd.merge(train, cust_df, on = "fullVisitorId")
+
+target_df = train[['new_cust_id', 'AOVPerCustomer']].groupby('new_cust_id').max()['AOVPerCustomer'].reset_index()
+cust_df = pd.merge(cust_df, target_df, on="new_cust_id")
+# Some customers have a very high AOV (16k, 7k, 5.6k etc..). Should these customers
+# ..    be included in the analysis?
+
+# Creating features
+
+# First creating # visits from various categories of categorical features
+# Ex: total visits done from browser, mobile, tablet | total organic search visits etc..
+
+def count_category_visits(categorical_variable, category):
+    print("Current category is ", category)
+    category_newname = category.replace(" ", "_")
+    gbdf = train.groupby(['new_cust_id', categorical_variable]).count()['transactionRevenueNew'].reset_index(name= category_newname+"_visits")
+    gbdf[categorical_variable] = gbdf[categorical_variable].astype(str)
+    gbdf = gbdf[gbdf[categorical_variable] == category]
+    gbdf = gbdf[["new_cust_id", category_newname+"_visits"]]
+    return gbdf
+
+categorical_variables = ['channelGrouping', 'deviceCategory', 'wday']
+
+for categorical_variable in categorical_variables:
+    for category in list(set(train[categorical_variable])):
+        print("Executing process for ", categorical_variable)
+        print("And category", category)
+        gc.collect()
+        print(cust_df.shape)
+        cust_df = pd.merge(cust_df, count_category_visits(categorical_variable, category), on = "new_cust_id", how="left")
+
+cust_df.fillna(0, inplace=True)
+
+# Now creating the common features such as 
+
+
+''' Decision tree plot Example '''
+
+from sklearn.tree import DecisionTreeRegressor, export_graphviz
+from sklearn import tree
+from graphviz import Source
+
+# Need to download graphviz executables to display DT in console
+# Shall need below code then
+#import os
+#os.environ["PATH"] += os.pathsep + 'D:/Program Files (x86)/Graphviz2.38/bin/'
+
+features = [i for i in list(cust_df.columns) if i not in ['fullVisitorId', 'AOVPerCustomer']]
+
+# feature matrix
+X = cust_df[features]
+
+# target vector
+y = cust_df['AOVPerCustomer']
+
+estimator = DecisionTreeRegressor(criterion='mae')
+estimator.fit(X, y)
+
+dot_data = tree.export_graphviz(estimator, out_file='tree.dot', max_depth=5, feature_names=features) 
+
+
+
+
+
